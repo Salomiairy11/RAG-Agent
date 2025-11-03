@@ -1,14 +1,15 @@
-import uuid
 from fastapi import FastAPI, UploadFile, File, Query, HTTPException, Depends
 from sqlalchemy.orm import Session
 
-from app.services.text_extraction import extract_text, UnsupportedFileType, EmptyOrUnreadableFile
+from app.services.text_extraction import extract_text
 from app.services.chunking import get_text_chunks
 from langchain_huggingface import HuggingFaceEmbeddings
+from datetime import datetime
+import uuid
 
 from app.db.models import SessionLocal
 from app.db import crud
-from app.services.vectorstore import ensure_index_and_upsert
+from app.services.vectorstore import store_embeddings
 
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
@@ -31,60 +32,35 @@ async def upload_file(
     """
     Upload a text or PDF file, extract content, and apply the selected chunking strategy.
     """
-    try:
-        content_bytes = await file.read()
-        file_type = file.content_type
-        filename = file.filename
+   
+    content_bytes = await file.read()
+    file_type = file.content_type
+    filename = file.filename
 
-        content = extract_text(file_type, content_bytes)
-        
-        docs_to_index, stats = get_text_chunks(strategy, filename, content, embeddings)
+    content = extract_text(file_type, content_bytes)
+    
+    docs_to_index, stats = get_text_chunks(strategy, filename, content, embeddings)
 
-        if not docs_to_index:
-            raise HTTPException(status_code=400, detail="No chunks produced from the file.")
+    if not docs_to_index:
+        raise HTTPException(status_code=400, detail="No chunks produced from the file.")
 
-        document_id = str(uuid.uuid4())
-        
-        pinecone_mapping = ensure_index_and_upsert(docs_to_index, embeddings, document_id=document_id)
+    # Store embeddings (side-effect)
+    store_embeddings(docs_to_index)
 
-        metadata_rows = []
-        for doc in docs_to_index:
-            meta = doc.metadata or {}
-            chunk_index = meta.get("chunk_index")
-            chunk_strategy = meta.get("strategy")
-            metadata = {
+    # Build metadata list from produced documents and use the injected DB session
+    metadata_list = []
+    document_id = str(uuid.uuid4())
+    for doc in docs_to_index:
+        metadata_list.append(
+            {
                 "document_id": document_id,
-                "chunk_index": chunk_index,
-                "chunk_strategy": chunk_strategy,
+                "chunk_index": doc.metadata.get("chunk_index"),
+                "chunk_strategy": doc.metadata.get("strategy"),
                 "chunk_filename": filename,
-                "pinecone_id": pinecone_mapping.get((chunk_strategy, chunk_index)),  # depends on how vectorstore returns ids
-                "extra": {"text_preview": doc.page_content[:200]},
+                "created_at": datetime.utcnow(),
             }
-            row = crud.insert_chunk_metadata(db, metadata)
-            metadata_rows.append({
-                "id": row.id,
-                "chunk_index": row.chunk_index,
-                "pinecone_id": row.pinecone_id,
-            })
+        )
 
-        response = {
-            "document_id": document_id,
-            "stats": stats,
-            "indexed_chunks": len(metadata_rows),
-        }
-        return response
+    crud.insert_chunks(db, metadata_list)
 
-    except UnsupportedFileType as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except EmptyOrUnreadableFile as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except HTTPException:
-        raise
-    except Exception as e:
-        # log in real app
-        raise HTTPException(status_code=500, detail=f"Server error: {e}")
-        
-    
-    
-    
-    
+    return {"message": "File uploaded, chunks stored, and metadata saved.", "chunks": len(docs_to_index)}

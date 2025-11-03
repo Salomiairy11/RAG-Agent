@@ -36,7 +36,7 @@ def get_text_chunks(strategy: str, filename, content: str, embeddings):
     stats: Dict[str, Any] = {}
     docs_to_index: List[Document] = []
 
-    if strategy in ("recursive"):
+    if strategy == "recursive":
         recursive_chunks = recursive_text_splitter(content)
         stats["recursive_chunk_count"] = len(recursive_chunks)
         docs_to_index.extend(
@@ -51,7 +51,7 @@ def get_text_chunks(strategy: str, filename, content: str, embeddings):
             for i, chunk in enumerate(recursive_chunks)
         )
 
-    if strategy in ("semantic"):
+    if strategy == "semantic":
         semantic_chunks = semantic_text_splitter(embeddings, content)
         stats["semantic_chunk_count"] = len(semantic_chunks)
         docs_to_index.extend(
