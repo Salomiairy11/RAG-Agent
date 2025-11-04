@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.db.models import ChunkMetadata
+from .models import ChunkMetadata
 from typing import List, Dict
 
 def insert_chunks(db: Session, metadata_list: List[Dict]):
@@ -8,7 +8,6 @@ def insert_chunks(db: Session, metadata_list: List[Dict]):
     """
     for meta in metadata_list:
         row = ChunkMetadata(
-            document_id=meta["document_id"],
             chunk_index=meta["chunk_index"],
             chunk_strategy=meta["chunk_strategy"],
             chunk_filename=meta["chunk_filename"],

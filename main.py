@@ -1,6 +1,10 @@
-def main():
-    print("Hello from palmmind!")
+from fastapi import FastAPI
+from ConversationalRAG.app.main import router as agent_router
+from DocumentIngestionAPI.app.main import router as upload_router
 
+app = FastAPI(title="Conversational RAG API")
 
-if __name__ == "__main__":
-    main()
+# include both routers
+app.include_router(agent_router)
+app.include_router(upload_router)
+

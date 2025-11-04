@@ -1,14 +1,11 @@
-import os
-from pinecone import Pinecone, ServerlessSpec
+from pinecone import ServerlessSpec
 from langchain_pinecone import PineconeVectorStore
-from langchain_huggingface import HuggingFaceEmbeddings
+from ..config import get_index_name, get_pineconeClient, get_embeddings
 
-pinecone_key = os.environ.get("PINECONE_API_KEY")
-pc = Pinecone(api_key=pinecone_key)
 
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-
-INDEX_NAME = "langchainvector"
+pc = get_pineconeClient()
+embeddings = get_embeddings()
+INDEX_NAME = get_index_name()
 
 def store_embeddings(docs):
     if INDEX_NAME not in [index.name for index in pc.list_indexes()]:
@@ -24,3 +21,6 @@ def store_embeddings(docs):
         index_name=INDEX_NAME
     )
 
+def get_vector_store():
+    vectorstore = PineconeVectorStore(index_name=INDEX_NAME, embedding=embeddings)
+    return vectorstore

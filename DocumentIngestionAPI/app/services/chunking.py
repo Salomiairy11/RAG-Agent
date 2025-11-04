@@ -1,6 +1,6 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
-from langchain.docstore.document import Document
+from langchain_core.documents import Document
 from typing import List, Dict, Any
 
 def recursive_text_splitter(content: str):
