@@ -1,10 +1,19 @@
 import fitz 
 
-def extract_text(file_type, content_bytes):
+def extract_text(file_type: str, content_bytes: bytes) -> str:
     """
     Extract text from .txt or .pdf content bytes.
+
+    Args:
+        file_type (str): MIME type of the file ('text/plain' or 'application/pdf').
+        content_bytes (bytes): The raw content of the file.
+
     Returns:
-      Extracted text (str).
+        str: Extracted text content.
+
+    Raises:
+        ValueError: If the file type is unsupported or content is empty/unreadable.
+        RuntimeError: If reading a PDF fails.
     """
     content = ""
 
@@ -16,11 +25,11 @@ def extract_text(file_type, content_bytes):
                 for page in doc:
                     content += page.get_text()
         except Exception as e:
-            raise Exception(f"Failed to read PDF: {e}") from e
+            raise RuntimeError(f"Failed to read PDF: {e}") from e
     else:
-        raise Exception("Unsupported file type. Please upload .txt or .pdf")
+        raise ValueError("Unsupported file type. Please upload .txt or .pdf")
 
-    if not content or not content.strip():
-        raise Exception("The file appears to be empty or unreadable.")
+    if not content.strip():
+        raise ValueError("The file appears to be empty or unreadable.")
     
     return content

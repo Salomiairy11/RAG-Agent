@@ -1,13 +1,17 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_core.documents import Document
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 
-def recursive_text_splitter(content: str):
+def recursive_text_splitter(content: str)-> List[str]:
     """
-    Splits text using LangChain's RecursiveCharacterTextSplitter.
+    Split text using LangChain's RecursiveCharacterTextSplitter.
+
+    Args:
+        content (str): The text to split.
+
     Returns:
-      List of text chunks (List[str]).
+        List[str]: List of text chunks.
     """
     recursive_char_chunker = RecursiveCharacterTextSplitter(
         separators=["\n\n", "\n", " ", ".", "?", "!"],
@@ -17,21 +21,36 @@ def recursive_text_splitter(content: str):
     )
     return recursive_char_chunker.split_text(content)
 
-def semantic_text_splitter(embeddings, content: str):
+def semantic_text_splitter(embeddings, content: str)-> List[str]:
     """
-    Splits text using LangChain's SemanticChunker (HuggingFace Embeddings).
+    Split text using LangChain's SemanticChunker.
+
+    Args:
+        embeddings: HuggingFace embeddings object.
+        content (str): The text to split.
+
     Returns:
-      List of text chunks (List[str]).
+        List[str]: List of text chunks.
     """
     semantic_chunker = SemanticChunker(embeddings)
     return semantic_chunker.split_text(content)
 
 
-def get_text_chunks(strategy: str, filename, content: str, embeddings):
+def get_text_chunks(
+    strategy: str, filename: str, content: str, embeddings: Any) -> Tuple[List[Document], Dict[str, Any]]:
     """
-    Get text chunks based on the specified strategy.
-    Returns a tuple of (list of Document chunks, stats dictionary for metadata).
-    
+    Generate text chunks based on the specified strategy.
+
+    Args:
+        strategy (str): 'recursive' or 'semantic'.
+        filename (str): Name of the file being processed.
+        content (str): Text content to chunk.
+        embeddings: HuggingFace embeddings object (for semantic strategy).
+
+    Returns:
+        Tuple[List[Document], Dict[str, Any]]:
+            - List of Document chunks with metadata.
+            - Stats dictionary for chunking metadata.
     """
     stats: Dict[str, Any] = {}
     docs_to_index: List[Document] = []
@@ -51,7 +70,7 @@ def get_text_chunks(strategy: str, filename, content: str, embeddings):
             for i, chunk in enumerate(recursive_chunks)
         )
 
-    if strategy == "semantic":
+    elif strategy == "semantic":
         semantic_chunks = semantic_text_splitter(embeddings, content)
         stats["semantic_chunk_count"] = len(semantic_chunks)
         docs_to_index.extend(
@@ -65,6 +84,9 @@ def get_text_chunks(strategy: str, filename, content: str, embeddings):
             )
             for i, chunk in enumerate(semantic_chunks)
         )
+    
+    else:
+        raise ValueError(f"Unknown chunking strategy: {strategy}")
 
     stats["strategy_used"] = strategy
     stats["total_chunks"] = len(docs_to_index)

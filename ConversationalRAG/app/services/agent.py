@@ -1,20 +1,26 @@
+import logging
+import re
+from datetime import datetime
+from typing import Any, Dict
+
 from .retrieval import retrieve_context
 from .chat_history import get_chat_history, save_to_history
 from .generation import generate_llm_response
 from .booking import handle_booking
 from ..config import get_redis_client
-import re
-from datetime import datetime
 
+logger = logging.getLogger(__name__)
 REQUIRED_BOOKING_FIELDS = ["name", "email", "date", "time"]
 
+
+# VALIDATION LOGIC FOR EACH FIELD
 def is_valid_email(email: str) -> bool:
     """Simple email validation."""
     pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
     return bool(re.match(pattern, email))        
 
 def is_valid_date(date_str: str) -> bool:
-    """Check if date is in YYYY-MM-DD format and valid."""
+    """Check if date is in YYYY-MM-DD format"""
     try:
         datetime.strptime(date_str, "%Y-%m-%d")
         return True
@@ -30,15 +36,23 @@ def is_valid_time(time_str: str) -> bool:
         return False
 
 
-def chat_with_agent(user_query: str, session_id: str):
-    """Main orchestrator for chat and booking."""
-    user_query_lower = user_query.lower()
+
+# BOOKING AND CHAT ORCHESTRATION
+def chat_with_agent(user_query: str, session_id: str)-> str:
+    """
+    Main orchestrator handling both chat and booking interactions.
+    - Detects booking intent
+    - Collects booking details progressively via Redis
+    - Falls back to RAG chat if no booking is in progress
+    """
+    
+    user_query = user_query.lower()
     redis_client = get_redis_client()
 
     booking_state_key = f"booking_state:{session_id}"
     booking_data = redis_client.hgetall(booking_state_key)
 
-    if any(keyword in user_query_lower for keyword in ["book interview", "schedule interview", "set interview"]):
+    if any(keyword in user_query for keyword in ["book interview", "schedule interview", "set interview"]):
         redis_client.delete(booking_state_key)
         redis_client.hset(booking_state_key, mapping={"progress": "name"})
         response = "Sure! Let's book your interview. What's your full name?"
@@ -102,7 +116,7 @@ def chat_with_agent(user_query: str, session_id: str):
     chat_history = get_chat_history(session_id)
 
     prompt = f"""
-    You are a helpful assistant that answers based on context and conversation history.
+    You are a helpful assistant. Answer questions using the provided context and conversation history. Keep responses clear, accurate, and relevant.
 
     Context:
     {context}

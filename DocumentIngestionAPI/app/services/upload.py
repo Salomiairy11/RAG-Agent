@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from typing import Any, Dict
 
 from .text_extraction import extract_text
 from .chunking import get_text_chunks
@@ -9,7 +10,28 @@ from ..db.crud import insert_chunks
 from .vectorstore import store_embeddings
 from ..config import get_embeddings
 
-def upload_to_db(content_bytes, file_type, filename, strategy, db: Session):
+def upload_to_db(content_bytes: bytes,
+    file_type: str,
+    filename: str,
+    strategy: str,
+    db: Session
+) -> Dict[str, Any]:
+    """
+    Process a file: extract text, chunk it, store embeddings, and save metadata to the database.
+
+    Args:
+        content_bytes (bytes): Raw file content.
+        file_type (str): MIME type of the file ('text/plain' or 'application/pdf').
+        filename (str): Name of the uploaded file.
+        strategy (str): Chunking strategy ('recursive' or 'semantic').
+        db (Session): SQLAlchemy database session to insert metadata.
+
+    Returns:
+        Dict[str, Any]: Dictionary containing the total number of chunks and the first few chunk previews.
+
+    Raises:
+        HTTPException: If no chunks are produced from the file.
+    """
 
     content = extract_text(file_type, content_bytes)
     embeddings = get_embeddings()

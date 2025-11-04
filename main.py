@@ -4,7 +4,10 @@ from DocumentIngestionAPI.app.main import router as upload_router
 
 app = FastAPI(title="Conversational RAG API")
 
-# include both routers
-app.include_router(agent_router)
+#Document Ingestion API
 app.include_router(upload_router)
+
+#Conversational RAG API
+app.include_router(agent_router)
+
 

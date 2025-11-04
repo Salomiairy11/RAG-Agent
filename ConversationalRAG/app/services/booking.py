@@ -3,8 +3,11 @@ from ..db.schemas import InterviewCreate
 from ..db.models import SessionLocal
 from ..db.crud import save_booking_to_db
 
-def handle_booking(name: str, email: str, date: str, time: str):
-    """Create and save booking entry in DB."""
+def handle_booking(name: str, email: str, date: str, time: str)-> str:
+    """
+    Create and save booking entry in DB.
+    
+    """
     try:
         booking_data = InterviewCreate(
             name=name,
