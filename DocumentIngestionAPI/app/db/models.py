@@ -30,10 +30,9 @@ class ChunkMetadata(Base):
     chunk_filename: str = Column(String, nullable=False)
     created_at: datetime = Column(DateTime, default=datetime.now, nullable=False)
     
-try:
-    Base.metadata.create_all(bind=engine)
-    logger.info("Chunk MetaData table created or already exists.")
-except Exception as e:
-    logger.error("Error while creating tables: %s", str(e), exc_info=True)   
+
+Base.metadata.create_all(bind=engine)
+logger.info("Chunk MetaData table created or already exists.")
+  
 
 

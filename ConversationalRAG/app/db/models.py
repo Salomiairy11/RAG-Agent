@@ -37,8 +37,6 @@ class Interview(Base):
         server_default=text("CURRENT_TIMESTAMP")
     )
     
-try:
-    Base.metadata.create_all(bind=engine)
-    logger.info("Interview table created or already exists.")
-except Exception as e:
-    logger.error("Error while creating tables: %s", str(e), exc_info=True)
+
+Base.metadata.create_all(bind=engine)
+logger.info("Interview table created or already exists.")
